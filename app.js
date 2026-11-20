@@ -3,7 +3,7 @@
   "use strict";
   const C = window.CONTENT;
   const N = C.stops.length;
-  const KEY = "kerstboom-v17";
+  const KEY = "kerstboom-v20";
   const NS = "http://www.w3.org/2000/svg";
   const $ = (s, r = document) => r.querySelector(s);
   const body = document.body;
@@ -113,7 +113,18 @@
     return `${(cx + rad * Math.cos(a)).toFixed(1)},${(cy + rad * Math.sin(a)).toFixed(1)}`;
   }).join(" ");
 
-  const svg = $("#tree");
+  const svg = $("#tree"), fsvg = $("#treeFx"), bsvg = $("#treeBack");
+  // schermvullend: in een app op het beginscherm rekent iOS de statusbalk soms niet mee
+  const appEl = $("#app");
+  const vw = () => appEl.clientWidth || window.innerWidth;
+  const vh = () => appEl.clientHeight || window.innerHeight;
+  function fitApp() {
+    const standalone = navigator.standalone || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+    const portrait = window.innerHeight > window.innerWidth;
+    const sh = portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width);
+    appEl.style.height = standalone && sh - window.innerHeight > 8 && sh - window.innerHeight < 140 ? `${sh}px` : "";
+  }
+  fitApp();
   const yBot = 498, yTop = 94;
   const way = C.stops.map((s, i) => {
     if (i === 0) return { x: 200, y: yBot };
@@ -121,7 +132,7 @@
     const y = yBot - (i / (N - 1)) * (yBot - yTop);
     return { x: 200 + (i % 2 ? -1 : 1) * halfW(y) * 0.74, y };
   });
-  let bulbs = [], wayLen = [], ornEls = [], starEl;
+  let bulbs = [], wayLen = [], ornEls = [], starEl, drops = [], twinkles = [];
 
   function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   let warmEl;
@@ -137,7 +148,7 @@
     shade: { sh: "#0f252e", base: "#2d5261", mid: "#254656", hi: "#7da2ad", snow: "#cfe0ea", snowSh: "#5f7f93" },
   };
   function buildTree() {
-    svg.innerHTML = "";
+    svg.innerHTML = ""; fsvg.innerHTML = ""; bsvg.innerHTML = "";
     const R = rng(1212);
     const toneFor = (u) => { const v = u + (R() - 0.5) * 0.55; return v < -0.28 ? "lit" : v < 0.22 ? "mid" : "shade"; };
     // een pluk naalden: waaier van spitse blaadjes die door de zwaartekracht hangen
@@ -197,9 +208,11 @@
       <linearGradient id="patchG" x1="0" x2="1"><stop offset="0" stop-color="#f1e9d8"/><stop offset=".45" stop-color="#e6ebee"/><stop offset="1" stop-color="#c3d8e4"/></linearGradient>
       <linearGradient id="trunkG" x1="0" x2="1"><stop offset="0" stop-color="#8a7260"/><stop offset=".45" stop-color="#5f4c40"/><stop offset="1" stop-color="#3b3030"/></linearGradient>
       <pattern id="grain" width="64" height="64" patternUnits="userSpaceOnUse"><image href="data:image/png;base64,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" width="64" height="64"/></pattern>
+      <radialGradient id="ornSh"><stop offset="0" stop-color="#06131a" stop-opacity=".45"/><stop offset="1" stop-color="#06131a" stop-opacity="0"/></radialGradient>
+      <radialGradient id="softSh"><stop offset="0" stop-color="#5d7598" stop-opacity=".6"/><stop offset="1" stop-color="#5d7598" stop-opacity="0"/></radialGradient>
       <filter id="blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3.2"/></filter>`;
 
-    warmEl = el("ellipse", { cx: 200, cy: 330, rx: 270, ry: 300, fill: "url(#treeWarm)", class: "tree-warm" }, svg);
+    warmEl = el("ellipse", { cx: 200, cy: 330, rx: 270, ry: 300, fill: "url(#treeWarm)", class: "tree-warm" }, bsvg);
 
     // sneeuwplek met stenen, takjes, lantaarns en cadeaus
     let patch = "";
@@ -221,17 +234,13 @@
          <ellipse cx="248" cy="600" rx="6" ry="3.2" fill="#80858c"/><ellipse cx="247" cy="599" rx="3.4" ry="1.4" fill="#c1c5cb"/></g>
       <path d="M58 600 l14 -4 M66 598 l4 -5 M336 588 l12 3 M344 589 l2 5" stroke="#6b5444" stroke-width="2" stroke-linecap="round"/>
       <g class="lantern" transform="translate(44 576) scale(.9)">
-        <circle cx="0" cy="-4" r="30" fill="url(#lampGlow)" class="lamp-glow"/>
         <path d="M-9 -22 H9 L7 -27 H-7Z" fill="#2c2f3f"/><rect x="-10" y="-22" width="20" height="26" rx="3" fill="#2c2f3f"/>
         <rect x="-7" y="-19" width="14" height="20" rx="2" fill="#ffd98a"/>
-        <path class="flame" d="M0 -3 C-3 -7 -1 -11 0 -14 C1 -11 3 -7 0 -3Z" fill="#ff9d3a"/>
         <rect x="-11" y="4" width="22" height="4" rx="2" fill="#2c2f3f"/><path d="M-4 -27 Q0 -33 4 -27" fill="none" stroke="#2c2f3f" stroke-width="2"/>
       </g>
       <g class="lantern" transform="translate(360 582) scale(.78)">
-        <circle cx="0" cy="-4" r="30" fill="url(#lampGlow)" class="lamp-glow" style="animation-delay:-1.1s"/>
         <path d="M-9 -22 H9 L7 -27 H-7Z" fill="#2c2f3f"/><rect x="-10" y="-22" width="20" height="26" rx="3" fill="#2c2f3f"/>
         <rect x="-7" y="-19" width="14" height="20" rx="2" fill="#ffd98a"/>
-        <path class="flame" style="animation-delay:-.7s" d="M0 -3 C-3 -7 -1 -11 0 -14 C1 -11 3 -7 0 -3Z" fill="#ff9d3a"/>
         <rect x="-11" y="4" width="22" height="4" rx="2" fill="#2c2f3f"/><path d="M-4 -27 Q0 -33 4 -27" fill="none" stroke="#2c2f3f" stroke-width="2"/>
       </g>
       <path d="M186 492 C189 526 186 552 177 568 C168 578 152 582 138 585 C150 588 166 588 180 582 C184 586 190 590 197 590 L203 590 C210 590 216 586 220 582 C234 588 250 588 262 585 C248 582 232 578 223 568 C214 552 211 526 214 492Z" fill="url(#trunkG)"/>
@@ -271,16 +280,10 @@
     el("path", { d: [...tiers].map((t) => tierPath({ ...t, hw: t.hw + 12, bottom: t.bottom + 12 })).join(" "), fill: "url(#grain)", opacity: ".55", "pointer-events": "none" }, svg);
 
     // sneeuw die af en toe van een tak valt
-    const dropG = el("g", { class: "drops", "pointer-events": "none" }, svg);
+    drops = [];
     dropSites.slice(0, 16).forEach((d) => {
-      const dur = 7 + R() * 7, delay = -R() * dur, dx = (R() - 0.5) * 16;
-      for (let q = 0; q < 4; q++) {
-        const c = el("circle", { cx: (d.x + (R() - 0.5) * 6).toFixed(1), cy: (d.y + (R() - 0.5) * 3).toFixed(1), r: (0.9 + R() * 1.5).toFixed(1), fill: "#fff", class: "drop" }, dropG);
-        c.style.setProperty("--dx", `${(dx + (R() - 0.5) * 8).toFixed(1)}px`);
-        c.style.setProperty("--fall", `${(55 + R() * 45).toFixed(0)}px`);
-        c.style.animationDuration = `${dur.toFixed(2)}s`;
-        c.style.animationDelay = `${(delay - q * 0.07).toFixed(2)}s`;
-      }
+      const dur = 7 + R() * 7, delay = R() * dur, dx = (R() - 0.5) * 16;
+      for (let q = 0; q < 4; q++) drops.push({ x: d.x + (R() - 0.5) * 6, y: d.y + (R() - 0.5) * 3, r: 0.9 + R() * 1.5, dx: dx + (R() - 0.5) * 8, fall: 55 + R() * 45, dur, delay: delay + q * 0.07 });
     });
 
     // rondvliegende blaadjes en sneeuwbrokjes
@@ -289,8 +292,7 @@
     for (let k = 0; k < 20; k++) {
       const y = 140 + R() * 400, sd = R() < 0.5 ? -1 : 1, x = 200 + sd * (halfW(Math.min(y, 500)) + 16 + R() * 44);
       const g = el("g", { transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(R() * 360).toFixed(0)}) scale(${(0.6 + R() * 0.8).toFixed(2)})` }, flyG);
-      const leaf = el("path", { d: k % 4 === 3 ? "M0 0 C1 -2 4 -2 5 0 C4 2 1 2 0 0Z" : "M0 0 C2 -3 7 -3 9 0 C7 3 2 3 0 0Z", fill: flyCols[k % flyCols.length], class: "leafbit" }, g);
-      leaf.style.animationDelay = `${(-R() * 6).toFixed(2)}s`;
+      el("path", { d: k % 4 === 3 ? "M0 0 C1 -2 4 -2 5 0 C4 2 1 2 0 0Z" : "M0 0 C2 -3 7 -3 9 0 C7 3 2 3 0 0Z", fill: flyCols[k % flyCols.length] }, g);
     }
 
     const pts = [];
@@ -307,23 +309,18 @@
     wayLen[N - 1] = total;
 
     const bp = ["#ffe3a0", "#ff9fb6", "#8fe6d3", "#ffd06e", "#fff4e0", "#c7b2ff", "#9cc8ff"];
-    const glowG = el("g", { filter: "url(#blur)" }, svg), bulbG = el("g", {}, svg);
     bulbs = [];
     let i = 0;
     for (let L = 7; L < total - 4; L += 12, i++) {
-      const p = path.getPointAtLength(L), c = bp[i % bp.length];
-      const glow = el("circle", { cx: p.x, cy: p.y, r: 9, fill: c, class: "bulb-glow" }, glowG);
-      const b = el("circle", { cx: p.x, cy: p.y, r: 3.3, fill: c, class: "bulb off" }, bulbG);
-      b.style.animationDelay = glow.style.animationDelay = `${(i * 0.37) % 2.6}s`;
-      bulbs.push({ L, b, glow });
+      const p = path.getPointAtLength(L);
+      bulbs.push({ L, x: p.x, y: p.y, c: bp[i % bp.length], ph: ((i * 0.37) % 2.6) * 2.42, on: false });
     }
 
-    const sparkG = el("g", { class: "sparks" }, svg);
+    twinkles = [];
     for (let s = 0; s < 9; s++) {
       const y = 120 + R() * 370, hw = halfW(y) * 0.85;
       if (hw < 10) continue;
-      const sp = el("path", { d: "M0 -6 L1.3 -1.3 L6 0 L1.3 1.3 L0 6 L-1.3 1.3 L-6 0 L-1.3 -1.3Z", fill: "#fff8dc", class: "spark", transform: `translate(${(200 + (R() * 2 - 1) * hw).toFixed(1)} ${y.toFixed(1)}) scale(${(0.5 + R() * 0.5).toFixed(2)})` }, sparkG);
-      sp.style.animationDelay = `${(R() * 4).toFixed(2)}s`;
+      twinkles.push({ x: 200 + (R() * 2 - 1) * hw, y, k: 0.5 + R() * 0.5, delay: R() * 4 });
     }
 
     // ballen: glanzend oranjerood, half tussen de takken
@@ -335,9 +332,9 @@
       if (idx === N - 1) return;
       const p = way[idx], oc = s.kleur || ORN[idx % ORN.length];
       odefs.insertAdjacentHTML("beforeend", `<radialGradient id="og${idx}" cx=".36" cy=".32" r=".78"><stop offset="0" stop-color="${mixHex(oc, "#ffffff", 0.45)}"/><stop offset=".45" stop-color="${oc}"/><stop offset="1" stop-color="${mixHex(oc, "#000000", 0.55)}"/></radialGradient>`);
-      const g = el("g", { class: "orn", transform: `translate(${p.x} ${p.y + 11})`, "data-i": idx }, svg);
+      const g = el("g", { class: "orn", transform: `translate(${p.x} ${p.y + 11})`, "data-i": idx }, fsvg);
       const sh = el("g", { class: "shake" }, g);
-      el("ellipse", { cx: 3, cy: 6, rx: 15, ry: 13, fill: "#06131a", opacity: ".35", filter: "url(#blur)" }, sh);
+      el("ellipse", { cx: 3, cy: 6, rx: 19, ry: 17, fill: "url(#ornSh)" }, sh);
       el("rect", { x: -4.5, y: -20, width: 9, height: 6, rx: 1.5, fill: "#b89a5a" }, sh);
       el("circle", { r: 21, class: "ring" }, sh);
       el("circle", { r: 16.5, fill: `url(#og${idx})`, class: "ball" }, sh);
@@ -349,19 +346,21 @@
       const u = (p.x - 200) / (halfW(p.y) || 1);
       tuft(coverG, p.x - 3, p.y - 12, Math.PI / 2 - u * 0.9, 15, TONES[u < -0.3 ? "lit" : u < 0.25 ? "mid" : "shade"], 4, false);
     });
-    svg.appendChild(coverG);
+    fsvg.appendChild(coverG);
 
-    starEl = el("g", { class: "star", "data-i": N - 1 }, svg);
-    const rays = el("g", { class: "star-rays" }, starEl);
+    starEl = el("g", { class: "star", "data-i": N - 1 }, fsvg);
+    const sfx = $("#starFx"); sfx.innerHTML = "";
+    const sfSvg = (cls) => { const s2 = document.createElementNS(NS, "svg"); s2.setAttribute("viewBox", "80 -54 240 240"); s2.setAttribute("class", cls); sfx.appendChild(s2); return s2; };
+    const haloSvg = sfSvg("sf-halo"), raySvg = sfSvg("sf-rays"), orbitSvg = sfSvg("sf-orbit");
+    const rays = el("g", {}, raySvg);
     const rayCols = ["#fff3c4", "#ffb3c8", "#a6f0dd", "#ffe08a", "#d4c2ff", "#9cc8ff"];
     $("defs", svg).insertAdjacentHTML("beforeend", rayCols.map((c, j) => `<linearGradient id="ray${j}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity="0"/><stop offset=".35" stop-color="${c}" stop-opacity=".6"/><stop offset="1" stop-color="${c}" stop-opacity="0"/></linearGradient>`).join(""));
     for (let r = 0; r < 12; r++) el("path", { d: "M-3.4 -40 L0 -116 L3.4 -40Z", fill: `url(#ray${r % rayCols.length})`, transform: `translate(200 66) rotate(${r * 30 + (r % 2) * 8})`, opacity: r % 2 ? ".6" : "1" }, rays);
-    rays.innerHTML += `<animateTransform attributeName="transform" type="rotate" from="0 200 66" to="360 200 66" dur="60s" repeatCount="indefinite"/>`;
     // kleurige gloed: goud in het midden, roze en mint aan de rand
     $("defs", svg).insertAdjacentHTML("beforeend", `
       <radialGradient id="starHalo"><stop offset="0" stop-color="#fff1b8" stop-opacity=".95"/><stop offset=".35" stop-color="#ffc861" stop-opacity=".55"/><stop offset=".6" stop-color="#ff8fb4" stop-opacity=".25"/><stop offset=".82" stop-color="#8fe6d3" stop-opacity=".12"/><stop offset="1" stop-color="#8fe6d3" stop-opacity="0"/></radialGradient>
       <radialGradient id="gem" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffd1e0"/><stop offset=".45" stop-color="#ff4f86"/><stop offset="1" stop-color="#9c1745"/></radialGradient>`);
-    el("circle", { cx: 200, cy: 66, r: 64, fill: "url(#starHalo)", class: "star-glow" }, starEl);
+    el("circle", { cx: 200, cy: 66, r: 64, fill: "url(#starHalo)" }, haloSvg);
     // facetten: elke punt een lichte en een donkere helft
     const sp = starPts(200, 66, 30, 13).split(" ").map((q) => q.split(",").map(Number));
     for (let f = 0; f < 10; f++) {
@@ -373,15 +372,18 @@
     el("circle", { cx: 200, cy: 66, r: 6.2, fill: "url(#gem)", class: "star-gem" }, starEl);
     el("circle", { cx: 198, cy: 64, r: 1.8, fill: "#fff", opacity: ".85" }, starEl);
     // kleine gekleurde lichtjes die om de piek draaien
-    const orbit = el("g", { class: "star-orbit" }, starEl);
+    const orbit = el("g", {}, orbitSvg);
     ["#ff8fb4", "#8fe6d3", "#ffd06e", "#c7b2ff", "#9cc8ff", "#ffb38a"].forEach((c, j) => {
       const ang = (j / 6) * Math.PI * 2, rr = 44 + (j % 2) * 6;
       el("circle", { cx: (200 + Math.cos(ang) * rr).toFixed(1), cy: (66 + Math.sin(ang) * rr * 0.8).toFixed(1), r: j % 2 ? 2.2 : 2.8, fill: c }, orbit);
     });
-    orbit.innerHTML += `<animateTransform attributeName="transform" type="rotate" from="0 200 66" to="360 200 66" dur="18s" repeatCount="indefinite"/>`;
     el("circle", { cx: 200, cy: 66, r: 42, fill: "transparent" }, starEl);
     const ring = el("circle", { cx: 200, cy: 66, r: 38, fill: "none", stroke: "#f2cf6b", "stroke-width": "2.6", opacity: "0", class: "sring" }, starEl);
     ring.style.transformBox = "fill-box"; ring.style.transformOrigin = "center";
+    // de losse sterlagen volgen de klassen van de ster (aan, bijna, weggeschoten)
+    const syncStar = () => { sfx.className = (starEl.getAttribute("class") || "").replace("star", "").trim(); };
+    new MutationObserver(syncStar).observe(starEl, { attributes: true, attributeFilter: ["class"] });
+    syncStar();
   }
   function gift(x, y, w, h, c, rib) {
     const cx = x + w / 2;
@@ -402,8 +404,8 @@
   function setBulbs(len, from) {
     bulbs.forEach((x) => {
       const on = x.L <= len;
-      if (from !== undefined && on && x.L > from) setTimeout(() => { x.b.classList.replace("off", "on"); x.glow.classList.add("on"); }, (x.L - from) * 7);
-      else { x.b.classList.toggle("on", on); x.b.classList.toggle("off", !on); x.glow.classList.toggle("on", on); }
+      if (from !== undefined && on && x.L > from) setTimeout(() => { x.on = true; }, (x.L - from) * 7);
+      else x.on = on;
     });
   }
   function renderOrns() {
@@ -415,7 +417,7 @@
     const starOn = S.done >= N;
     starEl.classList.toggle("on", starOn);
     starEl.classList.toggle("near", !starOn && S.done === N - 1);
-    $(".sring", starEl).style.animation = S.done === N - 1 ? "pulse 1.8s ease-out infinite" : "none";
+    $(".sring", starEl).style.animation = "none";
   }
   const render = () => {
     setBulbs(litLen()); renderOrns();
@@ -425,7 +427,7 @@
   /* ---------------- top light string ---------------- */
   let topBulbs = [];
   function buildTopLights() {
-    const t = $("#topLights"), w = innerWidth;
+    const t = $("#topLights"), w = vw();
     t.setAttribute("viewBox", `0 0 ${w} 70`);
     t.innerHTML = '<defs><filter id="tlBlur" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="4"/></filter></defs>';
     const wire = el("path", { d: `M-10 14 Q${w * 0.25} 52 ${w * 0.5} 18 Q${w * 0.75} 52 ${w + 10} 14`, fill: "none", stroke: "#2c3a52", "stroke-width": 1.5 }, t);
@@ -450,7 +452,7 @@
   const front = $("#snowFront"), nctx = front.getContext("2d");
   const drift = $("#drift"), dctx = drift.getContext("2d");
   let flakes = [], fflakes = [], stars = [], parts = [], sparks = [], flash = 0;
-  const dpr = Math.min(2, devicePixelRatio || 1);
+  const dpr = Math.min(2, devicePixelRatio || 1), sdpr = 1, fdpr = Math.min(1.5, devicePixelRatio || 1);
   // zachte vlok als sprite, scheelt rekenwerk
   const flakeSprite = (() => {
     const c = document.createElement("canvas"); c.width = c.height = 32;
@@ -466,12 +468,86 @@
     gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.12, col); gr.addColorStop(0.4, col + "55"); gr.addColorStop(1, col + "00");
     g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return (glowCache[col] = c);
   };
-  const newFlake = (top) => ({ x: Math.random() * innerWidth, y: top ? -10 - Math.random() * 40 : Math.random() * innerHeight, r: Math.random() * 1.7 + 1.9, v: Math.random() * 0.6 + 0.7, d: Math.random() * 6.3, s: Math.random() * 0.02 + 0.008 });
+  const newFlake = (top) => ({ x: Math.random() * vw(), y: top ? -10 - Math.random() * 40 : Math.random() * vh(), r: Math.random() * 1.7 + 1.9, v: Math.random() * 0.6 + 0.7, d: Math.random() * 6.3, s: Math.random() * 0.02 + 0.008 });
+  const lightsC = $("#treeLights"), lctx = lightsC.getContext("2d"), cam2 = $("#cam");
+  const ldpr = Math.min(2, devicePixelRatio || 1);
+  // zelfde schaal en uitlijning als de boom-svg (die wordt gecentreerd binnen #cam)
+  let lk = 1, lox = 0, loy = 0;
+  function sizeLights() {
+    const cw = cam2.clientWidth, ch = cam2.clientHeight;
+    lightsC.width = Math.round(cw * ldpr); lightsC.height = Math.round(ch * ldpr);
+    const k = Math.min(cw / 400, ch / 620);
+    lk = k * ldpr; lox = ((cw - 400 * k) / 2) * ldpr; loy = ((ch - 620 * k) / 2) * ldpr;
+    const sf = $("#starFx");
+    Object.assign(sf.style, { left: `${(cw - 400 * k) / 2 + 80 * k}px`, top: `${(ch - 620 * k) / 2 - 54 * k}px`, width: `${240 * k}px`, height: `${240 * k}px` });
+  }
+  const twPath = new Path2D("M0 -6 L1.3 -1.3 L6 0 L1.3 1.3 L0 6 L-1.3 1.3 L-6 0 L-1.3 -1.3Z");
+  function drawLights(now) {
+    if (!lightsC.width) return;
+    lctx.setTransform(1, 0, 0, 1, 0, 0);
+    lctx.clearRect(0, 0, lightsC.width, lightsC.height);
+    lctx.setTransform(lk, 0, 0, lk, lox, loy);
+    const t = now / 1000;
+    lctx.fillStyle = "#2b3547";
+    lctx.beginPath();
+    bulbs.forEach((b) => { if (!b.on) { lctx.moveTo(b.x + 3.3, b.y); lctx.arc(b.x, b.y, 3.3, 0, 6.3); } });
+    lctx.fill();
+    lctx.globalCompositeOperation = "lighter";
+    bulbs.forEach((b) => {
+      if (!b.on) return;
+      const a = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(t * 2.42 + b.ph));
+      lctx.globalAlpha = a * 0.75; lctx.drawImage(glowSprite(b.c), b.x - 15, b.y - 15, 30, 30);
+    });
+    lctx.globalCompositeOperation = "source-over";
+    bulbs.forEach((b) => {
+      if (!b.on) return;
+      lctx.globalAlpha = 0.7 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.42 + b.ph));
+      lctx.fillStyle = b.c; lctx.beginPath(); lctx.arc(b.x, b.y, 3.3, 0, 6.3); lctx.fill();
+    });
+    if (S.lit) {
+      // lantaarns: warme gloed en een flakkerend vlammetje
+      [[44, 576, 0.9, 0], [360, 582, 0.78, 1.1]].forEach(([lx, ly, sc, ph]) => {
+        const f = 0.5 + 0.5 * Math.sin(t * 2.4 + ph) * Math.sin(t * 5.3 + ph * 2);
+        lctx.globalCompositeOperation = "lighter";
+        lctx.globalAlpha = 0.45 + 0.25 * f; lctx.drawImage(glowSprite("#ffb347"), lx - 34 * sc, ly - 4 * sc - 34 * sc, 68 * sc, 68 * sc);
+        lctx.globalCompositeOperation = "source-over";
+        lctx.globalAlpha = 1; lctx.fillStyle = "#ff9d3a";
+        const h = (11 + 3 * f) * sc, w = (3 - 0.4 * f) * sc, by = ly - 3 * sc;
+        lctx.beginPath(); lctx.moveTo(lx, by); lctx.bezierCurveTo(lx - w, by - h * 0.35, lx - w * 0.3, by - h * 0.75, lx, by - h); lctx.bezierCurveTo(lx + w * 0.3, by - h * 0.75, lx + w, by - h * 0.35, lx, by); lctx.fill();
+      });
+      // pulserende ring rond de bal (of ster) die nu aan de beurt is
+      const cur = S.done;
+      if (cur < N) {
+        const ring = cur === N - 1 ? { x: 200, y: 66, r: 38 } : { x: way[cur].x, y: way[cur].y + 11, r: 21 };
+        const u = (t % 1.8) / 1.8;
+        lctx.globalAlpha = 0.9 * (1 - u); lctx.strokeStyle = "#f2cf6b"; lctx.lineWidth = 2.6 / (1 + 0.9 * u);
+        lctx.beginPath(); lctx.arc(ring.x, ring.y, ring.r * (1 + 0.9 * u), 0, 6.3); lctx.stroke();
+      }
+      lctx.fillStyle = "#fff8dc";
+      twinkles.forEach((s) => {
+        const u = (((t + s.delay) % 4.2) + 4.2) % 4.2 / 4.2;
+        const a = u < 0.45 || u > 0.75 ? 0 : u < 0.6 ? (u - 0.45) / 0.15 : (0.75 - u) / 0.15;
+        if (a <= 0) return;
+        lctx.globalAlpha = a * 0.95; lctx.save(); lctx.translate(s.x, s.y); lctx.scale(s.k, s.k); lctx.fill(twPath); lctx.restore();
+      });
+      lctx.fillStyle = "#fff";
+      drops.forEach((d) => {
+        const u = (((t + d.delay) % d.dur) + d.dur) % d.dur / d.dur;
+        if (u < 0.84) return;
+        const v = (u - 0.84) / 0.16;
+        lctx.globalAlpha = v < 0.12 ? v / 0.12 : 1 - v;
+        lctx.beginPath(); lctx.arc(d.x + d.dx * v, d.y + d.fall * v * v * 0.6 + d.fall * v * 0.4, d.r, 0, 6.3); lctx.fill();
+      });
+    }
+    lctx.globalAlpha = 1;
+  }
   function sizeCanvases() {
-    [snow, fx, front].forEach((c) => { c.width = innerWidth * dpr; c.height = innerHeight * dpr; });
-    flakes = Array.from({ length: 80 }, () => ({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: Math.random() * 1.5 + 0.4, v: Math.random() * 0.3 + 0.12, d: Math.random() * 6.3, a: Math.random() * 0.4 + 0.3 }));
+    sizeLights();
+    [snow, front].forEach((c) => { c.width = vw() * sdpr; c.height = vh() * sdpr; });
+    fx.width = vw() * fdpr; fx.height = vh() * fdpr;
+    flakes = Array.from({ length: 80 }, () => ({ x: Math.random() * vw(), y: Math.random() * vh(), r: Math.random() * 1.5 + 0.4, v: Math.random() * 0.3 + 0.12, d: Math.random() * 6.3, a: Math.random() * 0.4 + 0.3 }));
     fflakes = Array.from({ length: 30 }, () => newFlake(false));
-    stars = Array.from({ length: 70 }, () => ({ x: Math.random() * innerWidth, y: Math.random() * innerHeight * 0.55, r: Math.random() * 1.1 + 0.3, p: Math.random() * 6.3, s: Math.random() * 0.03 + 0.008 }));
+    stars = Array.from({ length: 70 }, () => ({ x: Math.random() * vw(), y: Math.random() * vh() * 0.55, r: Math.random() * 1.1 + 0.3, p: Math.random() * 6.3, s: Math.random() * 0.03 + 0.008 }));
     sizeDrift();
   }
 
@@ -479,7 +555,7 @@
   let driftH = [], driftBase = 0, driftOpenAt = 0, settled = [];
   const BIN = 3, DRIFT_TOP = 16;
   function sizeDrift() {
-    const w = sheet ? sheet.offsetWidth || innerWidth : innerWidth;
+    const w = sheet ? sheet.offsetWidth || vw() : vw();
     drift.width = w * dpr; drift.height = 34 * dpr;
     driftH = new Array(Math.ceil(w / BIN) + 2).fill(0);
   }
@@ -526,9 +602,9 @@
   }
 
   function loop(now = 0) {
-    const W = innerWidth, H = innerHeight;
+    const W = vw(), H = vh();
     // achterste laag: sterren + kleine vlokken
-    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sctx.setTransform(sdpr, 0, 0, sdpr, 0, 0);
     sctx.clearRect(0, 0, W, H);
     stars.forEach((s) => {
       s.p += s.s;
@@ -548,7 +624,7 @@
     if (open) { const rc = sheet.getBoundingClientRect(); top = rc.top; l = rc.left; r = rc.right; }
     const want = open ? 46 : 30;
     while (fflakes.length < want) fflakes.push(newFlake(true));
-    nctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    nctx.setTransform(sdpr, 0, 0, sdpr, 0, 0);
     nctx.clearRect(0, 0, W, H);
     for (let i = fflakes.length - 1; i >= 0; i--) {
       const f = fflakes[i];
@@ -565,10 +641,11 @@
     }
     nctx.globalAlpha = 1;
     if (open) drawDrift(now);
+    drawLights(now);
 
     // effecten: confetti, vonken, vuurwerk
     if (parts.length || sparks.length || flash > 0 || fxDirty) {
-      fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      fctx.setTransform(fdpr, 0, 0, fdpr, 0, 0);
       fctx.clearRect(0, 0, W, H);
       fxDirty = false;
       parts.forEach((p) => {
@@ -602,19 +679,19 @@
     requestAnimationFrame(loop);
   }
   let fxDirty = false, flashX = 0, flashY = 0;
-  function confetti(x = innerWidth / 2, y = innerHeight * 0.3, n = 110, spread = 1) {
+  function confetti(x = vw() / 2, y = vh() * 0.3, n = 110, spread = 1) {
     const cols = ["#f2cf6b", "#f7a8b8", "#8fd3c7", "#c9b6f5", "#fbf5ea", "#e57a7a"];
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2, sp = (Math.random() * 7 + 3) * spread;
       parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.3, w: Math.random() * 7 + 4, h: Math.random() * 4 + 3, c: cols[i % cols.length], life: 90 + Math.random() * 70 });
     }
   }
-  const party = (n = 3) => { for (let i = 0; i < n; i++) setTimeout(() => confetti(innerWidth * (0.15 + Math.random() * 0.7), innerHeight * (0.12 + Math.random() * 0.25), 90), i * 380); };
+  const party = (n = 3) => { for (let i = 0; i < n; i++) setTimeout(() => confetti(vw() * (0.15 + Math.random() * 0.7), vh() * (0.12 + Math.random() * 0.25), 90), i * 380); };
   const sideCannons = () => {
     [0, 1].forEach((side) => {
       for (let i = 0; i < 70; i++) {
         const cols = ["#f2cf6b", "#f7a8b8", "#8fd3c7", "#c9b6f5", "#fbf5ea"];
-        parts.push({ x: side ? innerWidth + 5 : -5, y: innerHeight * 0.75, vx: (side ? -1 : 1) * (Math.random() * 8 + 5), vy: -(Math.random() * 12 + 8), a: Math.random() * 6, va: (Math.random() - 0.5) * 0.3, w: Math.random() * 7 + 4, h: Math.random() * 4 + 3, c: cols[i % 5], life: 120 + Math.random() * 60 });
+        parts.push({ x: side ? vw() + 5 : -5, y: vh() * 0.75, vx: (side ? -1 : 1) * (Math.random() * 8 + 5), vy: -(Math.random() * 12 + 8), a: Math.random() * 6, va: (Math.random() - 0.5) * 0.3, w: Math.random() * 7 + 4, h: Math.random() * 4 + 3, c: cols[i % 5], life: 120 + Math.random() * 60 });
       }
     });
   };
@@ -628,7 +705,7 @@
     const sr = stage.getBoundingClientRect();
     const sx = sr.left + cam.offsetLeft + px, sy = sr.top + cam.offsetTop + py;
     cam.style.transformOrigin = `${px}px ${py}px`;
-    cam.style.transform = `translate(${innerWidth / 2 - sx}px, ${innerHeight * 0.13 - sy}px) scale(${scale})`;
+    cam.style.transform = `translate(${vw() / 2 - sx}px, ${vh() * 0.13 - sy}px) scale(${scale})`;
   }
   const unfocus = () => { cam.style.transform = ""; };
 
@@ -795,7 +872,7 @@
     unfocus();
     const sr = $(".star-shape", starEl).getBoundingClientRect();
     const sx = sr.left + sr.width / 2, sy = sr.top + sr.height / 2;
-    const W = innerWidth, H = innerHeight;
+    const W = vw(), H = vh();
     // de hele wereld schuift naar beneden, wij kijken mee omhoog de lucht in
     body.classList.add("finale");
     const hh = H * 0.4;
@@ -1087,8 +1164,8 @@
       renderOrns();
       chime(last ? [784, 988, 1175, 1568, 1976] : [988, 1319]);
       if (last) {
-        bulbs.forEach((x) => { x.b.classList.replace("off", "on"); x.glow.classList.add("on"); });
-        setTimeout(() => confetti(innerWidth / 2, innerHeight * 0.15, 160), 300);
+        bulbs.forEach((x) => { x.on = true; });
+        setTimeout(() => confetti(vw() / 2, vh() * 0.15, 160), 300);
         setTimeout(proostPage, 1800);
       } else {
         setTimeout(() => {
@@ -1131,7 +1208,7 @@
   /* ---------------- tree taps ---------------- */
   const plaagCount = {};
   let pressT, longFired = false;
-  svg.addEventListener("click", (e) => {
+  fsvg.addEventListener("click", (e) => {
     const g = e.target.closest("[data-i]");
     if (!g || !body.classList.contains("is-tree")) return;
     if (longFired) { longFired = false; return; }
@@ -1147,8 +1224,8 @@
     setTimeout(() => g.classList.remove("wiggle"), 600);
     toast(txt, "", 2600);
   });
-  svg.addEventListener("pointerdown", (e) => { if (e.target.closest(".star")) pressT = setTimeout(() => { longFired = true; openMaker(); }, 1200); });
-  ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => svg.addEventListener(ev, () => clearTimeout(pressT)));
+  fsvg.addEventListener("pointerdown", (e) => { if (e.target.closest(".star")) pressT = setTimeout(() => { longFired = true; openMaker(); }, 1200); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => fsvg.addEventListener(ev, () => clearTimeout(pressT)));
 
   /* ---------------- intro ---------------- */
   const toggle = $("#toggle");
@@ -1160,7 +1237,7 @@
     setTimeout(() => {
       body.classList.remove("is-dark"); body.classList.add("is-lit");
       lightTop();
-      bulbs.forEach((x, i) => setTimeout(() => { x.b.classList.replace("off", "on"); x.glow.classList.add("on"); }, 700 + i * 16));
+      bulbs.forEach((x, i) => setTimeout(() => { x.on = true; }, 700 + i * 16));
       setTimeout(() => { starEl.classList.add("on"); }, 700 + bulbs.length * 16);
     }, 350);
     setTimeout(() => $("#toggleWrap").classList.add("gone"), 800);
@@ -1169,7 +1246,7 @@
       S.lit = true; save();
       felicitatie();
       // achter de felicitatie gaat de slinger weer uit: het pad moet nog gelopen worden
-      setTimeout(() => { bulbs.forEach((x) => { if (x.L > litLen()) { x.b.classList.replace("on", "off"); x.glow.classList.remove("on"); } }); starEl.classList.remove("on"); renderOrns(); }, 900);
+      setTimeout(() => { bulbs.forEach((x) => { if (x.L > litLen()) { x.on = false; } }); starEl.classList.remove("on"); renderOrns(); }, 900);
     }, t);
   });
 
@@ -1183,6 +1260,7 @@
     if (S.naarKamer && !S.nacht) setTimeout(kamerPage, 600);
   }
   if (location.hash === "#maker") setTimeout(openMaker, 300);
-  addEventListener("resize", () => { buildTopLights(); sizeCanvases(); });
+  addEventListener("resize", () => { fitApp(); buildTopLights(); sizeCanvases(); });
+  setTimeout(() => { const h = appEl.style.height; fitApp(); if (appEl.style.height !== h) { buildTopLights(); sizeCanvases(); } }, 400);
   if ("serviceWorker" in navigator) { try { navigator.serviceWorker.register("sw.js").catch(() => {}); } catch (e) {} }
 })();

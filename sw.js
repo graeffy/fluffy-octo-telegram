@@ -1,5 +1,5 @@
 /* Kerstboom service worker: alles bewaren zodat de app ook zonder bereik werkt */
-const VERSIE = "kerstboom-v17";
+const VERSIE = "kerstboom-v20";
 const FILES = [
   "./",
   "index.html",
