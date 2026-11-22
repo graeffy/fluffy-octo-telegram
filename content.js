@@ -41,6 +41,8 @@ window.CONTENT = {
     eetsmakelijk: "Eetsmakelijk!",
     verder: "Verder",
     slaapLekker: "Slaap lekker",
+    opnieuw: "App opnieuw beginnen",
+    zekerWeten: "Zeker weten? Tik nog een keer",
     opPad: "Op pad!",
     looproute: "Looproute",
     terugHotel: "Terug naar het hotel",

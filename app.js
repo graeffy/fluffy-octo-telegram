@@ -3,7 +3,7 @@
   "use strict";
   const C = window.CONTENT;
   const N = C.stops.length;
-  const KEY = "kerstboom-v20";
+  const KEY = "kerstboom-v21";
   const NS = "http://www.w3.org/2000/svg";
   const $ = (s, r = document) => r.querySelector(s);
   const body = document.body;
@@ -32,7 +32,7 @@
     return f;
   };
   const BLANK = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-  const KNOP_STANDAARD = {"laatZien": "Laat zien", "weZijnEr": "We zijn er", "tikPakje": "Tik op het pakje.", "eetsmakelijk": "Eetsmakelijk!", "verder": "Verder", "slaapLekker": "Slaap lekker", "opPad": "Op pad!", "looproute": "Looproute", "terugHotel": "Terug naar het hotel", "routeHotel": "Route naar het hotel", "binnen": "We zijn binnen", "kiesMuziek": "Kies de muziek", "opReis": "Op reis!", "proost": "Proost!", "klaarDoor": "Klaar, door!", "opKamer": "We zijn op de kamer", "proeflijst": "Proeflijst", "informatie": "Informatie", "eten": "Eten", "drinken": "Drinken", "fotoideeen": "Fotoideeën", "cadeautje": "Cadeautje!", "ingepakt": "Nog ingepakt", "nog": "Nog", "dePiek": "DE PIEK", "lampje": "LAMPJE", "van": "VAN"};
+  const KNOP_STANDAARD = {"laatZien": "Laat zien", "weZijnEr": "We zijn er", "tikPakje": "Tik op het pakje.", "eetsmakelijk": "Eetsmakelijk!", "verder": "Verder", "slaapLekker": "Slaap lekker", "opnieuw": "App opnieuw beginnen", "zekerWeten": "Zeker weten? Tik nog een keer", "opPad": "Op pad!", "looproute": "Looproute", "terugHotel": "Terug naar het hotel", "routeHotel": "Route naar het hotel", "binnen": "We zijn binnen", "kiesMuziek": "Kies de muziek", "opReis": "Op reis!", "proost": "Proost!", "klaarDoor": "Klaar, door!", "opKamer": "We zijn op de kamer", "proeflijst": "Proeflijst", "informatie": "Informatie", "eten": "Eten", "drinken": "Drinken", "fotoideeen": "Fotoideeën", "cadeautje": "Cadeautje!", "ingepakt": "Nog ingepakt", "nog": "Nog", "dePiek": "DE PIEK", "lampje": "LAMPJE", "van": "VAN"};
   const T = (k) => ((C.knoppen || {})[k] ?? KNOP_STANDAARD[k] ?? k);
   const imgTag = (f, cls, w, fokus) => `<img class="${cls}" src="${esc(imgUrl(f, w))}"${fokus ? ` style="object-position:${esc(fokus)}"` : ""} alt="" loading="lazy" onerror="this.onerror=null;this.src='${BLANK}'">`;
   const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
@@ -122,7 +122,11 @@
     const standalone = navigator.standalone || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
     const portrait = window.innerHeight > window.innerWidth;
     const sh = portrait ? Math.max(screen.height, screen.width) : Math.min(screen.height, screen.width);
-    appEl.style.height = standalone && sh - window.innerHeight > 8 && sh - window.innerHeight < 140 ? `${sh}px` : "";
+    // op de iPhone als app: altijd de volle schermhoogte, ook onder statusbalk en thuisbalk
+    const full = standalone && Math.abs(window.innerWidth - (portrait ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height))) < 4;
+    document.documentElement.classList.toggle("standalone", !!standalone);
+    appEl.style.height = full ? `${sh}px` : "";
+    document.documentElement.style.height = document.body.style.height = full ? `${sh}px` : "";
   }
   fitApp();
   const yBot = 498, yTop = 94;
@@ -771,7 +775,16 @@
 
   function felicitatie() {
     const f = C.felicitatie;
-    showPage("pg-fel", `<div class="spacer"></div>
+    const bcol = ["#ffd23f", "#ff5d8f", "#4fc3f7", "#7ee08a", "#c7a6ff", "#ff9f45", "#ffffff", "#ff4f5e"];
+    const balloons = Array.from({ length: 14 }, (_, j) => {
+      const c = bcol[j % bcol.length], x = 4 + ((j * 37) % 92), s = 0.75 + ((j * 13) % 7) / 10, d = 7 + ((j * 7) % 6), del = -((j * 1.7) % d);
+      return `<div class="balloon" style="left:${x}%;--s:${s};--sway:${(j % 2 ? 1 : -1) * (10 + (j % 4) * 6)}px;animation-duration:${d}s;animation-delay:${del.toFixed(1)}s">
+        <svg viewBox="0 0 60 110"><path d="M30 76 Q26 88 32 96 Q38 104 30 110" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="1.4"/>
+        <path d="M30 2 C46 2 56 16 56 32 C56 52 40 70 30 74 C20 70 4 52 4 32 C4 16 14 2 30 2Z" fill="${c}"/>
+        <path d="M26 74 L34 74 L32 79 L28 79Z" fill="${c}"/>
+        <ellipse cx="19" cy="20" rx="5" ry="9" fill="#fff" opacity=".45" transform="rotate(-25 19 20)"/></svg></div>`;
+    }).join("");
+    showPage("pg-fel", `<div class="balloons" aria-hidden="true">${balloons}</div><div class="spacer"></div>
       <p class="pg-kicker in">${esc(C.naam)},</p>
       <p class="big-age in">${C.leeftijd}</p>
       <h1 class="pg-title in">${esc(f.titel)}</h1>
@@ -1101,7 +1114,8 @@
         return `<div class="row-check${S.proef[k] ? " on" : ""}" data-proef="${k}">${imgTag(p.foto, "th", 200)}<div class="t">${esc(p.naam)}</div><div class="bx">${ICON.check}</div></div>`;
       }).join("");
     });
-    openSheet(`<h2>${esc(T("proeflijst"))}</h2><p class="lead">${got} van ${total} binnen.</p>${h}`, { kleur: "#d7263d" });
+    openSheet(`<h2>${esc(T("proeflijst"))}</h2><p class="lead">${got} van ${total} binnen.</p>${h}
+      <div style="height:30px"></div><button class="btn btn-ghost" data-act="maker-reset">${esc(T("opnieuw"))}</button>`, { kleur: "#d7263d" });
   }
   function openCredits() {
     openSheet(`<h2>Fotocredits</h2><div class="credits">${C.credits.map(([type, f, a]) => type === "commons"
@@ -1143,7 +1157,7 @@
     if (a === "maker-nacht") { closeSheet(); setTimeout(welterusten, 300); }
     if (a === "maker-reset") {
       if (act.dataset.sure) { try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); }
-      else { act.dataset.sure = "1"; act.textContent = "Zeker weten? Tik nog een keer"; }
+      else { act.dataset.sure = "1"; act.textContent = T("zekerWeten"); }
     }
   });
 

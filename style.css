@@ -28,7 +28,7 @@ a { color: inherit; }
 }
 
 /* ---------- layers ---------- */
-#scenery { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 44%; z-index: 1; opacity: 0; transition: opacity 1.6s ease; }
+#scenery { position: absolute; left: 0; right: 0; bottom: 14%; width: 100%; height: 44%; z-index: 1; opacity: 0; transition: opacity 1.6s ease; }
 body.is-lit #scenery { opacity: 1; }
 #snow, #fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #snow { z-index: 2; opacity: 0; transition: opacity 2s ease; }
@@ -362,3 +362,15 @@ body.finale #sky::before { opacity: 0; }
 #starFx.launched { opacity: 0; }
 #starFx.back { animation: starBack 1.4s ease-out; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* app op het beginscherm: geen vaste-positie-container (iOS laat dan onderaan een strook vrij) */
+html.standalone #app { position: absolute; top: 0; left: 0; right: 0; bottom: auto; }
+html.standalone, html.standalone body { background: #2a3d72; }
+
+/* ballonnen op de felicitatiepagina */
+.balloons { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.pg-fel > :not(.bg):not(.balloons) { position: relative; z-index: 1; }
+.balloon { position: absolute; bottom: -160px; width: calc(58px * var(--s)); animation: balloonUp 9s linear infinite; will-change: transform; }
+.balloon svg { display: block; width: 100%; animation: balloonSway 3.2s ease-in-out infinite alternate; }
+@keyframes balloonUp { from { transform: translateY(0); } to { transform: translateY(calc(-100vh - 320px)); } }
+@keyframes balloonSway { from { transform: translateX(calc(var(--sway) * -1)) rotate(-4deg); } to { transform: translateX(var(--sway)) rotate(4deg); } }
